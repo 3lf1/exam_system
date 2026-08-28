@@ -33,6 +33,10 @@ const submissionSchema = new mongoose.Schema(
             type: Date,
             default: null,
         },
+        isLate: {
+            type: Boolean,
+            default: false,
+        },
     },{timestamps: true}
 )
 

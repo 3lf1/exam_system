@@ -6,7 +6,7 @@ exports.startExam = async (req, res) => {
         const examId = req.params.examId;
         const exam = await Exam.findById(examId);
 
-        if(!exam || exam.status !== 'published') {
+        if(!exam || exam.status !== 'ongoing') {
             return res.status(404).json({ status: 'fail', message: 'Exam not found or not published' });
         }
 
@@ -28,34 +28,40 @@ exports.startExam = async (req, res) => {
 }
 
 exports.submitExam = async (req, res) => {
-    try{
-        const submissionId = req.params.submissionId;
-        const { answers, score } = req.body;
+  try {
+    const submissionId = req.params.id;
+    const { answers, score } = req.body;
 
-        const submission = await Submission.findById(submissionId);
+    const submission = await Submission.findById(submissionId);
 
-        if(!submission) {
-            return res.status(404).json({ status: 'fail', message: 'Submission not found' });
-        }
-
-        if(submission.student.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ status: 'fail', message: 'This is not your submission' });
-        }
-
-        submission.answers = answers;
-        submission.score = score;
-        submission.status = 'submitted';
-        submission.submittedAt = Date.now();
-
-        await submission.save();
-
-        res.status(200).json({
-            status: 'success',
-            submission,
-        });
-    }catch(err){
-        res.status(400).json({ status: 'fail', message: err.message });
+    if (!submission) {
+      return res.status(404).json({ status: 'fail', message: 'Submission not found' });
     }
+
+    if (submission.student.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ status: 'fail', message: 'This is not your submission' });
+    }
+
+    const exam = await Exam.findById(submission.exam);
+    const elapsedMinutes = (Date.now() - submission.startedAt) / 1000 / 60;
+    const isLate = elapsedMinutes > exam.durationMinutes;
+
+    submission.answers = answers;
+    submission.score = score;
+    submission.status = 'submitted';
+    submission.submittedAt = Date.now();
+    submission.isLate = isLate;
+
+    await submission.save();
+
+    res.status(200).json({
+      status: 'success',
+      message: isLate ? 'Submitted, but after the time limit' : 'Submitted on time',
+      submission,
+    });
+  } catch (err) {
+    res.status(400).json({ status: 'fail', message: err.message });
+  }
 };
 
 
