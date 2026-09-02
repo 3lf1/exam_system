@@ -52,3 +52,19 @@ exports.getExamResults = async (req, res) => {
         res.status(400).json({ status: 'fail', message: err.message });
     }
 };
+
+exports.getMySubmissions = async (req, res) => {
+    try{
+        const submissions = await Submission.find({ student: req.user._id})
+        .populate('exam','title subject date status')
+        .sort('-createdAt');
+
+        res.status(200).json({
+            status: 'success',
+            results: submissions.length,
+            submissions,
+        });
+    }catch(err){
+        res.status(400).json({ status: 'fail', message: err.message });
+    }
+}
